@@ -1,6 +1,11 @@
+from decimal import Decimal
+
 from django.db import models
+from django.core.exceptions import ValidationError
 from apps.common.models import Country
 from django.conf import settings
+import uuid
+from django.db.models import Sum
 
 
 class FinancialInstitute(models.Model):
@@ -34,6 +39,12 @@ class Account(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
 
+    @property
+    def balance(self) -> Decimal:
+        """Calculate the sum of all entries for this account."""
+        result = self.entries.aggregate(total=Sum("amount"))["total"]
+        return result or Decimal("0.0000")
+
     def __str__(self):
         return self.name
 
@@ -55,3 +66,48 @@ class CreditCard(Account):
     institute = models.ForeignKey(FinancialInstitute, on_delete=models.PROTECT)
     last_four = models.CharField(max_length=4)
     expiry_date = models.DateField(null=True, blank=True)
+
+
+class Transaction(models.Model):
+    """The 'Header' of a financial event (e.g., 'Grocery Shopping')"""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    description = models.CharField(max_length=255)
+    valuta_date = models.DateField(
+        help_text="The date the transaction effectively happens"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.valuta_date} - {self.description}"
+
+    def clean(self):
+        """Ensure the transaction balances to zero."""
+        if self.pk:  # Only check if the transaction has entries saved
+            total = sum(entry.amount for entry in self.entries.all())
+            if total != 0:
+                raise ValidationError(
+                    f"Transaction does not balance! Current sum: {total}"
+                )
+
+
+class LedgerEntry(models.Model):
+    """The 'Legs' of a transaction. Every transaction must have at least two."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    transaction = models.ForeignKey(
+        Transaction, on_delete=models.CASCADE, related_name="entries"
+    )
+    account = models.ForeignKey(
+        "Account", on_delete=models.PROTECT, related_name="entries"
+    )
+
+    # Use Decimal for money. Never use Float!
+    amount = models.DecimalField(
+        max_digits=19,
+        decimal_places=4,
+        help_text="Positive for Credit, Negative for Debit",
+    )
+
+    def __str__(self):
+        return f"{self.account.name}: {self.amount}"

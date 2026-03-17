@@ -45,9 +45,23 @@ class FinancialInstituteAdmin(admin.ModelAdmin):
 
 @admin.register(Account)
 class AccountAdmin(admin.ModelAdmin):
-    list_display = ("name", "user", "account_type", "parent")
-    list_filter = ("account_type", "user")
-    search_fields = ("name",)
+    list_display = ("name", "account_type", "created_by", "get_owners")
+    list_filter = ("account_type", "created_by")
+    search_fields = ("name", "owners__first_name", "owners__last_name")
+
+    # Use filter_horizontal for a nice UI to pick multiple owners
+    filter_horizontal = ("owners",)
+
+    def get_owners(self, obj):
+        return ", ".join([str(p) for p in obj.owners.all()])
+
+    get_owners.short_description = "Owners (People)"
+
+    def save_model(self, request, obj, form, change):
+        """Automatically set created_by to the current user if not set"""
+        if not obj.pk:
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(BankAccount)

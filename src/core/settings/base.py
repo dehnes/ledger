@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "users",
     "common",
     "ledger",
+    "people",
 ]
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (

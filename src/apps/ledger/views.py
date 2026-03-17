@@ -12,11 +12,9 @@ class AccountViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        """
-        This is the security heart:
-        A user can ONLY see accounts belonging to them.
-        """
-        return Account.objects.filter(user=self.request.user).order_by("name")
+        # The user sees accounts THEY created (Manager role)
+        # regardless of who the "People" owners are.
+        return Account.objects.filter(created_by=self.request.user)
 
     def perform_create(self, serializer):
         """

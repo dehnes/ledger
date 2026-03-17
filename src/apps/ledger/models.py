@@ -36,8 +36,15 @@ class Account(models.Model):
     parent = models.ForeignKey(
         "self", on_delete=models.CASCADE, null=True, blank=True, related_name="children"
     )
-
+    # Many-to-Many relationship to our new People app
+    owners = models.ManyToManyField("people.Person", related_name="accounts")
     created_at = models.DateTimeField(auto_now_add=True)
+    # The 'created_by' keeps track of the system user who manages this
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="managed_accounts",
+    )
 
     @property
     def balance(self) -> Decimal:

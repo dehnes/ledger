@@ -45,6 +45,21 @@ class Account(models.Model):
         result = self.entries.aggregate(total=Sum("amount"))["total"]
         return result or Decimal("0.0000")
 
+    @property
+    def total_balance(self) -> Decimal:
+        """
+        Calculates the balance of this account PLUS all its descendants.
+        """
+        # 1. Get the balance of this specific account
+        current_balance = self.balance  # Uses the property we wrote earlier
+
+        # 2. Add balances of all children recursively
+        # We use .all() on the 'children' related_name we defined
+        for child in self.children.all():
+            current_balance += child.total_balance
+
+        return current_balance
+
     def __str__(self):
         return self.name
 

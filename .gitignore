@@ -3,5 +3,14 @@ venv/
 *.pyc
 __pycache__/
 db.sqlite3
+
+
+
 .env
+backend/.env
+frontend/.env.local
+frontend/.env.production
+
+
+
 .docker_dbdata/
